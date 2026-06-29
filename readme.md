@@ -415,29 +415,81 @@ After each upgrade step, check:
 * PocketCHIP UI;
 * SSH access, if enabled.
 
-## Clean up after rescue
+## After APT starts working
 
-After APT is working, remove temporary rescue settings that are no longer needed.
+Once `apt-get update` works through the proxy, the next step is to make the system less dependent on rescue settings.
 
-Remove the proxy config when the PocketCHIP no longer needs the rescue proxy:
-
-```bash
-sudo rm -f /etc/apt/apt.conf.d/01proxy
-```
-
-Remove the temporary insecure config after package authentication is working:
+Start by installing basic trust and HTTPS packages:
 
 ```bash
-sudo rm -f /etc/apt/apt.conf.d/99pocketchip-insecure
+sudo apt-get --allow-unauthenticated install debian-archive-keyring ca-certificates apt-transport-https
 ```
 
-Remove the archive expiry override after upgrading away from old archived Debian releases:
+If your old `apt-get` does not support `--allow-unauthenticated`, use:
 
 ```bash
-sudo rm -f /etc/apt/apt.conf.d/99pocketchip-archive
+sudo apt-get -o APT::Get::AllowUnauthenticated=true install debian-archive-keyring ca-certificates apt-transport-https
 ```
 
-Then refresh APT:
+Then retry:
+
+```bash
+sudo apt-get update
+echo $?
+```
+
+If the exit code is `0`, APT is usable. It may still show warnings while using old archived repositories.
+
+## Clean up APT sources
+
+The proxy is intended to get old stock PocketCHIP sources working without editing them first. After the first successful update, clean up the active source lists so future updates are more predictable.
+
+Inspect active sources:
+
+```bash
+grep -R "^[[:space:]]*deb " /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null
+```
+
+Back up the existing source list:
+
+```bash
+sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+sudo mkdir -p /root/apt-sources-backup
+sudo cp -a /etc/apt/sources.list.d /root/apt-sources-backup/
+```
+
+Remove or replace obsolete entries such as:
+
+```text
+opensource.nextthing.co
+http.debian.net
+security.debian.org jessie/updates
+ftp.us.debian.org
+jessie-backports
+jessie-updates
+```
+
+For a cleaned-up Jessie/PocketCHIP setup, use:
+
+```text
+deb http://archive.debian.org/debian/ jessie main contrib non-free
+deb http://archive.debian.org/debian-security/ jessie/updates main contrib non-free
+deb http://chip.jfpossibilities.com/chip/debian/repo jessie main
+deb http://chip.jfpossibilities.com/chip/debian/pocketchip jessie main
+```
+
+To replace `/etc/apt/sources.list` with that fallback:
+
+```bash
+sudo sh -c 'cat > /etc/apt/sources.list <<EOF
+deb http://archive.debian.org/debian/ jessie main contrib non-free
+deb http://archive.debian.org/debian-security/ jessie/updates main contrib non-free
+deb http://chip.jfpossibilities.com/chip/debian/repo jessie main
+deb http://chip.jfpossibilities.com/chip/debian/pocketchip jessie main
+EOF'
+```
+
+Then update again:
 
 ```bash
 sudo apt-get clean
@@ -445,11 +497,134 @@ sudo rm -rf /var/lib/apt/lists/*
 sudo apt-get update
 ```
 
-Keep `99pocketchip-archive` only if the system still uses archived Debian releases such as Jessie.
+## Test whether the proxy is still needed
 
-Keep `01proxy` only while routing APT through `pocketchip-apt-rescue`.
+After APT works and sources are cleaned up, temporarily disable the proxy:
 
-Do not leave `99pocketchip-insecure` enabled longer than necessary.
+```bash
+sudo mv /etc/apt/apt.conf.d/01proxy /etc/apt/apt.conf.d/01proxy.disabled
+```
+
+Then test direct APT:
+
+```bash
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update
+echo $?
+```
+
+If the exit code is `0`, the proxy is no longer needed for the current source list.
+
+Remove the disabled proxy config:
+
+```bash
+sudo rm -f /etc/apt/apt.conf.d/01proxy.disabled
+```
+
+If direct APT fails, restore the proxy:
+
+```bash
+sudo mv /etc/apt/apt.conf.d/01proxy.disabled /etc/apt/apt.conf.d/01proxy
+```
+
+Keep the proxy until direct `apt-get update` works or until you have upgraded to a suite/source configuration that no longer needs URL rewriting.
+
+## Remove temporary insecure settings
+
+Remove the insecure fallback as soon as package authentication is working:
+
+```bash
+sudo rm -f /etc/apt/apt.conf.d/99pocketchip-insecure
+```
+
+Then test:
+
+```bash
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update
+echo $?
+```
+
+If APT fails only because of old signature or key errors, restore the insecure config temporarily and continue bootstrapping.
+
+Do not leave `99pocketchip-insecure` enabled permanently.
+
+## Remove archive expiry override
+
+Keep the archive expiry override while using old archived Debian releases such as Jessie:
+
+```text
+/etc/apt/apt.conf.d/99pocketchip-archive
+```
+
+or:
+
+```text
+/etc/apt/apt.conf.d/99archive
+```
+
+After upgrading away from old archived releases, remove it:
+
+```bash
+sudo rm -f /etc/apt/apt.conf.d/99archive
+sudo rm -f /etc/apt/apt.conf.d/99pocketchip-archive
+```
+
+Then test:
+
+```bash
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update
+echo $?
+```
+
+## Distro-upgrade source changes
+
+If upgrading Debian, update source lists one release at a time.
+
+Recommended order:
+
+```text
+Jessie -> Stretch -> Buster -> Bullseye
+```
+
+Do not jump directly from Jessie to a current Debian release.
+
+At each step:
+
+1. Back up `/etc/apt/sources.list`.
+2. Replace only the Debian suite name and matching security/archive entries.
+3. Run `apt-get update`.
+4. Run `apt-get upgrade`.
+5. Run `apt-get dist-upgrade`.
+6. Reboot if needed.
+7. Check PocketCHIP-specific hardware and UI before continuing.
+
+Example upgrade flow:
+
+```bash
+sudo cp /etc/apt/sources.list /etc/apt/sources.list.before-upgrade
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get dist-upgrade
+```
+
+After each release upgrade, check:
+
+* boot;
+* screen;
+* keyboard;
+* Wi-Fi;
+* charging/battery status;
+* PocketCHIP UI;
+* SSH access, if enabled.
+
+The CHIP/PocketCHIP-specific repositories may not have packages for newer Debian suites. Keep PocketCHIP-specific source entries pinned to known working mirrors unless you know the replacement suite exists.
+
+If a distro upgrade removes or breaks PocketCHIP-specific packages, stop and fix that release before continuing.
 
 ## Related resources
 

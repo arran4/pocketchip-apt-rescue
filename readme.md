@@ -49,9 +49,9 @@ The proxy rewrites common old PocketCHIP and Debian Jessie repository URLs autom
 | `http://deb.debian.org/debian/...`                          | `https://archive.debian.org/debian/...`                               |
 | `http://ftp.debian.org/debian/...`                          | `https://archive.debian.org/debian/...`                               |
 | `http://security.debian.org/dists/jessie/updates/...`       | `https://archive.debian.org/debian-security/dists/jessie/updates/...` |
-| `http://opensource.nextthing.co/chip/debian/repo/...`       | `https://chip.jfpossibilities.com/chip/debian/repo/...`               |
-| `http://opensource.nextthing.co/chip/debian/pocketchip/...` | `https://chip.jfpossibilities.com/chip/debian/pocketchip/...`         |
-| `http://opensource.nextthing.co/dists/jessie/...`           | `https://chip.jfpossibilities.com/chip/debian/repo/dists/jessie/...`  |
+| `http://opensource.nextthing.co/chip/debian/repo/...` | `http://chip.jfpossibilities.com/chip/debian/repo/...` |
+| `http://opensource.nextthing.co/chip/debian/pocketchip/...` | `http://chip.jfpossibilities.com/chip/debian/pocketchip/...` |
+| `http://opensource.nextthing.co/dists/jessie/...` | `http://chip.jfpossibilities.com/chip/debian/repo/dists/jessie/...` |
 
 The PocketCHIP still only needs plain HTTP access to the proxy.
 
@@ -73,6 +73,83 @@ It is a bootstrap tool for restoring package access.
 Do not expose this proxy to the public internet.
 
 Run it only on a trusted local network. Ideally, bind it to a local interface or firewall it so only your PocketCHIP can connect.
+
+## Quick start
+
+On a modern computer:
+
+```bash
+git clone https://github.com/arran4/pocketchip-apt-rescue.git
+cd pocketchip-apt-rescue
+go build -o pocketchip-apt-rescue .
+./pocketchip-apt-rescue
+```
+Find the modern computer’s LAN IP address:
+
+```bash
+ip addr
+```
+On the PocketCHIP, replace `192.168.1.50` with that IP:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-proxy.conf \
+  | sed 's/YOUR_DESKTOP_IP/192.168.1.50/g' \
+  | sudo tee /etc/apt/apt.conf.d/01proxy
+```
+If `curl` is not installed, use `wget`:
+
+```bash
+wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-proxy.conf \
+  | sed 's/YOUR_DESKTOP_IP/192.168.1.50/g' \
+  | sudo tee /etc/apt/apt.conf.d/01proxy
+```
+Add minimal archive compatibility:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
+  | sudo tee /etc/apt/apt.conf.d/99pocketchip-archive
+```
+Or with `wget`:
+
+```bash
+wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
+  | sudo tee /etc/apt/apt.conf.d/99pocketchip-archive
+```
+Run the update:
+
+```bash
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update
+echo $?
+```
+If APT complains about invalid signatures, expired keys, or missing public keys:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
+  | sudo tee /etc/apt/apt.conf.d/99pocketchip-insecure
+
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update
+echo $?
+```
+Or with `wget`:
+
+```bash
+wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
+  | sudo tee /etc/apt/apt.conf.d/99pocketchip-insecure
+
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update
+echo $?
+```
+Once update works, install the bootstrap packages:
+
+```bash
+sudo apt-get --allow-unauthenticated install debian-archive-keyring ca-certificates apt-transport-https
+```
 
 ## Build
 
@@ -269,19 +346,22 @@ Each test should produce a `rewrite rule=...` line in the proxy logs.
 
 ## Environment variables
 
-| Variable                               |                     Default | Purpose                                     |
-| -------------------------------------- | --------------------------: | ------------------------------------------- |
-| `POCKETCHIP_PROXY_LISTEN`              |                     `:3142` | Listen address                              |
-| `POCKETCHIP_PROXY_UPSTREAM`            |                       empty | Optional upstream proxy                     |
-| `POCKETCHIP_PROXY_TIMEOUT`             |                      `120s` | Network timeout                             |
-| `POCKETCHIP_PROXY_LOG_LEVEL`           |                      `info` | `quiet`, `info`, or `debug`                 |
-| `POCKETCHIP_PROXY_DUMP_REQUESTS`       |                     `false` | Dump outbound request headers               |
-| `POCKETCHIP_PROXY_INSECURE_TLS`        |                     `false` | Disable upstream TLS verification           |
-| `POCKETCHIP_PROXY_ALLOW_CONNECT`       |                     `false` | Allow CONNECT tunnelling                    |
-| `POCKETCHIP_PROXY_HTTPS_UPSTREAM`      |                      `true` | Fetch upstream over HTTPS                   |
-| `POCKETCHIP_PROXY_REWRITE_KNOWN_REPOS` |                      `true` | Rewrite known old PocketCHIP/Jessie URLs    |
-| `POCKETCHIP_PROXY_BLOCK_DEAD_REPOS`    |                     `false` | Return explicit errors for known dead repos |
-| `POCKETCHIP_PROXY_USER_AGENT`          | `pocketchip-apt-rescue/0.1` | Upstream User-Agent                         |
+| Variable | Default | Purpose |
+|---|---:|---|
+| `POCKETCHIP_PROXY_LISTEN` | `:3142` | Listen address |
+| `POCKETCHIP_PROXY_UPSTREAM` | empty | Optional upstream proxy |
+| `POCKETCHIP_PROXY_TIMEOUT` | `25s` | Dial, TLS handshake, and response-header timeout |
+| `POCKETCHIP_PROXY_REQUEST_TIMEOUT` | `10m` | Whole upstream request timeout |
+| `POCKETCHIP_PROXY_LOG_LEVEL` | `warn` | `quiet`, `warn`, `info`, or `debug` |
+| `POCKETCHIP_PROXY_DUMP_REQUESTS` | `false` | Dump outbound request headers |
+| `POCKETCHIP_PROXY_INSECURE_TLS` | `false` | Disable upstream TLS verification |
+| `POCKETCHIP_PROXY_ALLOW_CONNECT` | `false` | Allow CONNECT tunnelling |
+| `POCKETCHIP_PROXY_HTTPS_UPSTREAM` | `true` | Fetch known HTTPS-capable upstreams over HTTPS |
+| `POCKETCHIP_PROXY_FORCE_HTTPS_ALL` | `false` | Force HTTPS for all non-private upstream hosts; can break mirrors with bad certificates |
+| `POCKETCHIP_PROXY_REWRITE_KNOWN_REPOS` | `true` | Rewrite known old PocketCHIP/Jessie URLs |
+| `POCKETCHIP_PROXY_BLOCK_DEAD_REPOS` | `false` | Return explicit errors for known dead repos |
+| `POCKETCHIP_PROXY_STRIP_RANGE` | `true` | Strip `Range` and `If-Range` upstream to avoid stale partial-cache `416` responses |
+| `POCKETCHIP_PROXY_USER_AGENT` | `pocketchip-apt-rescue/0.1` | Upstream User-Agent |
 
 Example:
 
@@ -380,40 +460,25 @@ The proxy fetches HTTPS upstream. The PocketCHIP should not need to.
 
 ### `Check-Valid-Until` or expired repository errors
 
-Add the archive compatibility config:
+Install the minimal archive compatibility config:
 
 ```bash
-sudo sh -c 'cat > /etc/apt/apt.conf.d/99archive <<EOF
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
+  | sudo tee /etc/apt/apt.conf.d/99pocketchip-archive
+```
+This only disables expired archive metadata checks:
+
+```
 Acquire::Check-Valid-Until "false";
-Acquire::AllowInsecureRepositories "true";
-Acquire::AllowDowngradeToInsecureRepositories "true";
-APT::Get::AllowUnauthenticated "true";
-EOF'
 ```
+If APT also reports invalid signatures, expired keys, or missing public keys,
+install the temporary insecure fallback:
 
-## Upgrading Debian
-
-Upgrade slowly.
-
-Suggested path for a PocketCHIP handheld:
-
-```text
-Jessie -> Stretch -> Buster -> Bullseye
 ```
-
-Avoid jumping directly from Jessie to a current Debian release.
-
-The PocketCHIP uses old vendor kernel and device-specific packages. A newer userspace may work, but display, keyboard, Wi-Fi, battery, charging, and the PocketCHIP UI can break.
-
-After each upgrade step, check:
-
-* boot;
-* screen;
-* keyboard;
-* Wi-Fi;
-* charging/battery status;
-* PocketCHIP UI;
-* SSH access, if enabled.
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
+  | sudo tee /etc/apt/apt.conf.d/99pocketchip-insecure
+```
+Do not leave `99pocketchip-insecure` enabled permanently.
 
 ## After APT starts working
 
@@ -580,6 +645,30 @@ sudo rm -rf /var/lib/apt/lists/*
 sudo apt-get update
 echo $?
 ```
+
+## Upgrading Debian
+
+Upgrade slowly.
+
+Suggested path for a PocketCHIP handheld:
+
+```text
+Jessie -> Stretch -> Buster -> Bullseye
+```
+
+Avoid jumping directly from Jessie to a current Debian release.
+
+The PocketCHIP uses old vendor kernel and device-specific packages. A newer userspace may work, but display, keyboard, Wi-Fi, battery, charging, and the PocketCHIP UI can break.
+
+After each upgrade step, check:
+
+* boot;
+* screen;
+* keyboard;
+* Wi-Fi;
+* charging/battery status;
+* PocketCHIP UI;
+* SSH access, if enabled.
 
 ## Distro-upgrade source changes
 

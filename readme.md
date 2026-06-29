@@ -106,13 +106,13 @@ wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/ap
 Add minimal archive compatibility:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
   | sudo tee /etc/apt/apt.conf.d/99pocketchip-archive
 ```
 Or with `wget`:
 
 ```bash
-wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
+wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
   | sudo tee /etc/apt/apt.conf.d/99pocketchip-archive
 ```
 Run the update:
@@ -126,7 +126,7 @@ echo $?
 If APT complains about invalid signatures, expired keys, or missing public keys:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
   | sudo tee /etc/apt/apt.conf.d/99pocketchip-insecure
 
 sudo apt-get clean
@@ -137,7 +137,7 @@ echo $?
 Or with `wget`:
 
 ```bash
-wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
+wget -O - https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
   | sudo tee /etc/apt/apt.conf.d/99pocketchip-insecure
 
 sudo apt-get clean
@@ -463,7 +463,7 @@ The proxy fetches HTTPS upstream. The PocketCHIP should not need to.
 Install the minimal archive compatibility config:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
   | sudo tee /etc/apt/apt.conf.d/99pocketchip-archive
 ```
 This only disables expired archive metadata checks:
@@ -475,7 +475,7 @@ If APT also reports invalid signatures, expired keys, or missing public keys,
 install the temporary insecure fallback:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-insecure.conf \
+curl -fsSL https://raw.githubusercontent.com/arran4/pocketchip-apt-rescue/main/apt-archive.conf \
   | sudo tee /etc/apt/apt.conf.d/99pocketchip-insecure
 ```
 Do not leave `99pocketchip-insecure` enabled permanently.

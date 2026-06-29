@@ -1,4 +1,6 @@
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+FROM alpine:3.20.3
+RUN apk --no-cache add ca-certificates && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 COPY pocketchip-apt-rescue /usr/local/bin/pocketchip-apt-rescue
 ENTRYPOINT ["/usr/local/bin/pocketchip-apt-rescue"]

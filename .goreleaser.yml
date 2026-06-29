@@ -31,8 +31,8 @@ checksum:
 
 dockers:
   - image_templates:
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Tag }}
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}-amd64
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:latest-amd64
     dockerfile: Dockerfile.goreleaser
     use: buildx
     goos: linux
@@ -40,8 +40,8 @@ dockers:
     build_flag_templates:
       - "--platform=linux/amd64"
   - image_templates:
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Tag }}-arm64
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest-arm64
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}-arm64
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:latest-arm64
     dockerfile: Dockerfile.goreleaser
     use: buildx
     goos: linux
@@ -49,8 +49,8 @@ dockers:
     build_flag_templates:
       - "--platform=linux/arm64"
   - image_templates:
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Tag }}-arm
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest-arm
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}-arm
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:latest-arm
     dockerfile: Dockerfile.goreleaser
     use: buildx
     goos: linux
@@ -59,16 +59,16 @@ dockers:
       - "--platform=linux/arm/v7"
 
 docker_manifests:
-  - name_template: ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Tag }}
+  - name_template: ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}
     image_templates:
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Tag }}
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Tag }}-arm64
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Tag }}-arm
-  - name_template: ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}-amd64
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}-arm64
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}-arm
+  - name_template: ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:latest
     image_templates:
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest-arm64
-      - ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest-arm
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:latest-amd64
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:latest-arm64
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:latest-arm
 
 changelog:
   sort: asc

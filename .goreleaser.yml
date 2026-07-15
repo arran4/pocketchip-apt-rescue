@@ -20,7 +20,7 @@ builds:
       - arm64
       - arm
     goarm:
-      - 7
+      - "7"
 
 archives:
   - formats: [tar.gz]
@@ -57,14 +57,17 @@ dockers:
     use: buildx
     goos: linux
     goarch: arm
+    goarm: "7"
     build_flag_templates:
       - "--platform=linux/arm/v7"
 
 nfpms:
   - id: default
     package_name: pocketchip-apt-rescue
+    homepage: "https://github.com/arran4/pocketchip-apt-rescue"
     maintainer: "arran4"
     description: "pocketchip-apt-rescue proxy for PocketCHIP"
+    license: "unknown"
     formats:
       - deb
 

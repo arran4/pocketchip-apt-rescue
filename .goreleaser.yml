@@ -19,6 +19,8 @@ builds:
       - amd64
       - arm64
       - arm
+    goarm:
+      - "7"
 
 archives:
   - formats: [tar.gz]
@@ -57,6 +59,16 @@ dockers:
     goarch: arm
     build_flag_templates:
       - "--platform=linux/arm/v7"
+
+nfpms:
+  - id: default
+    package_name: pocketchip-apt-rescue
+    maintainer: "arran4"
+    description: "pocketchip-apt-rescue proxy for PocketCHIP"
+    homepage: "https://github.com/arran4/pocketchip-apt-rescue"
+    license: "MIT"
+    formats:
+      - deb
 
 docker_manifests:
   - name_template: ghcr.io/{{ .Env.GITHUB_REPOSITORY | tolower }}:{{ .Tag }}
